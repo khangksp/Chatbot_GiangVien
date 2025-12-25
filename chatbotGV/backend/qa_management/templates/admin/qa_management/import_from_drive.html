@@ -1,0 +1,106 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls static admin_modify %}
+
+{% block title %}Import & Hot Reload | Django Admin{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">Trang chủ</a>
+    &rsaquo; <a href="{% url 'admin:qa_management_qaentry_changelist' %}">Q&A Entries</a>
+    &rsaquo; Import & Hot Reload
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="module aligned" style="max-width: 800px;">
+    <h1>🚀 Import & Hot Reload từ Drive</h1>
+    
+    <div class="form-row" style="margin: 20px 0; padding: 15px; background: #f8f9fa; border-left: 4px solid #17a2b8;">
+        <h3 style="color: #17a2b8; margin-top: 0;">ℹ️ Quy trình xử lý</h3>
+        <ul style="margin: 0; line-height: 1.6;">
+            <li><strong>1. Sync Disk:</strong> Tải file <code>QA.csv</code> mới nhất từ Google Drive về Database.</li>
+            <li><strong>2. Cập nhật DB:</strong> Tạo mới hoặc cập nhật các câu hỏi dựa trên STT.</li>
+            <li><strong>3. 🔥 Hot Reload:</strong> Xóa bộ nhớ cũ và nạp dữ liệu mới vào RAM của Chatbot ngay lập tức.</li>
+        </ul>
+    </div>
+    
+    <div class="form-row" style="margin: 20px 0; padding: 15px; background: #fff3cd; border-left: 4px solid #ffc107;">
+        <h3 style="color: #856404; margin-top: 0;">⚠️ Lưu ý</h3>
+        <ul style="margin: 0; color: #856404;">
+            <li>Hành động này sẽ cập nhật kiến thức cho Chatbot <strong>ngay lập tức</strong>.</li>
+            <li>Không cần khởi động lại (Restart) Server.</li>
+            <li>Đảm bảo bạn đã lưu file trên Google Drive trước khi bấm nút.</li>
+        </ul>
+    </div>
+    
+    <form method="post" style="margin-top: 30px;">
+        {% csrf_token %}
+        
+        <div class="form-row">
+            <div class="field-box">
+                <h2>Xác nhận hành động</h2>
+                <p>Bạn có chắc chắn muốn tải dữ liệu và làm mới bộ nhớ AI không?</p>
+                
+                <div style="margin: 20px 0;">
+                    <label>
+                        <input type="checkbox" id="confirm_import" required>
+                        Tôi hiểu và muốn thực hiện Hot Reload
+                    </label>
+                </div>
+                
+                <div style="margin: 20px 0;">
+                    <label>
+                        <input type="checkbox" id="create_backup" checked>
+                        Tạo backup dữ liệu hiện tại (Khuyến nghị)
+                    </label>
+                </div>
+            </div>
+        </div>
+        
+        <div class="submit-row">
+            <input type="submit" value="🚀 CHẠY IMPORT & RELOAD NGAY" class="default" 
+                   onclick="return confirm('Hệ thống sẽ tải dữ liệu và nạp lại bộ nhớ AI. Tiếp tục?');">
+            <a href="../tools/" class="button cancel-link">
+                Quay lại
+            </a>
+        </div>
+    </form>
+    
+    <div class="form-row" style="margin-top: 30px; padding: 15px; background: #d4edda; border-left: 4px solid #28a745;">
+        <h3 style="color: #155724; margin-top: 0;">💡 Trạng thái</h3>
+        <p style="margin: 0; color: #155724;">
+            Sau khi quá trình hoàn tất (khoảng 3-5 giây), Chatbot sẽ trả lời được ngay các câu hỏi mới.
+        </p>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const confirmCheckbox = document.getElementById('confirm_import');
+    const submitButton = document.querySelector('input[type="submit"]');
+    
+    // Disable nút submit ban đầu
+    submitButton.disabled = true;
+    submitButton.style.opacity = '0.5';
+    
+    confirmCheckbox.addEventListener('change', function() {
+        submitButton.disabled = !this.checked;
+        if (this.checked) {
+            submitButton.style.opacity = '1';
+            submitButton.style.cursor = 'pointer';
+        } else {
+            submitButton.style.opacity = '0.5';
+            submitButton.style.cursor = 'not-allowed';
+        }
+    });
+
+    // Hiệu ứng loading khi bấm nút
+    document.querySelector('form').addEventListener('submit', function() {
+        if (submitButton.disabled === false) {
+            submitButton.value = "⏳ Đang xử lý (Vui lòng đợi)...";
+            submitButton.style.opacity = '0.8';
+        }
+    });
+});
+</script>
+{% endblock %}

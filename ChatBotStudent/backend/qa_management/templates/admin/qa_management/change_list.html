@@ -1,0 +1,11 @@
+{% extends "admin/change_list.html" %}
+{% load i18n %}
+
+{% block object-tools-items %}
+    <li>
+        <a href="tools/" class="addlink" style="background: #17a2b8; color: white; font-weight: bold;">
+            ⚙️ CÔNG CỤ & HOT RELOAD
+        </a>
+    </li>
+    {{ block.super }}
+{% endblock %}

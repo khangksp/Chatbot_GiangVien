@@ -1,0 +1,385 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls static admin_modify %}
+
+{% block title %}Bulk Import từ CSV | Django Admin{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">Trang chủ</a>
+    &rsaquo; <a href="{% url 'admin:qa_management_qaentry_changelist' %}">Q&A Entries</a>
+    &rsaquo; Bulk Import từ CSV
+</div>
+{% endblock %}
+
+{% block extrahead %}
+<style>
+.upload-area {
+    border: 2px dashed #ccc;
+    border-radius: 8px;
+    padding: 40px;
+    text-align: center;
+    background: #f9f9f9;
+    margin: 20px 0;
+    transition: all 0.3s ease;
+}
+
+.upload-area.dragover {
+    border-color: #007bff;
+    background: #e3f2fd;
+}
+
+.file-info {
+    margin: 15px 0;
+    padding: 10px;
+    background: #e8f4fd;
+    border-radius: 4px;
+    display: none;
+}
+
+.format-example {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    padding: 15px;
+    margin: 20px 0;
+    font-family: monospace;
+    overflow-x: auto;
+}
+
+.requirements {
+    background: #fff3cd;
+    border-left: 4px solid #ffc107;
+    padding: 15px;
+    margin: 20px 0;
+}
+
+.requirements ul {
+    margin: 10px 0;
+    padding-left: 20px;
+}
+
+.preview-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 20px 0;
+    display: none;
+}
+
+.preview-table th,
+.preview-table td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+}
+
+.preview-table th {
+    background: #f8f9fa;
+    font-weight: bold;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="module aligned" style="max-width: 900px;">
+    <h1>📊 Bulk Import Q&A từ CSV</h1>
+    
+    <div class="requirements">
+        <h3 style="margin-top: 0;">📋 Yêu cầu định dạng CSV</h3>
+        <ul>
+            <li><strong>Encoding:</strong> UTF-8</li>
+            <li><strong>Header:</strong> STT, question, answer (bắt buộc)</li>
+            <li><strong>STT:</strong> Phải unique, định dạng: TB_1252, QA_001, etc.</li>
+            <li><strong>Question:</strong> Không được để trống</li>
+            <li><strong>Answer:</strong> Không được để trống</li>
+            <li><strong>Category:</strong> Tự động set thành "Giảng viên" nếu không có</li>
+        </ul>
+    </div>
+    
+    <div class="format-example">
+        <h3>💡 Ví dụ định dạng CSV:</h3>
+        <pre>STT,question,answer,,
+TB_1252,"Ngân hàng đề thi là gì?","Ngân hàng đề thi là...",,
+TB_1253,"Làm sao để nộp báo cáo?","Bạn cần gửi file về...",,
+QA_001,"Thời hạn nộp là khi nào?","Thời hạn nộp là...",,</pre>
+        <p style="color: #666; font-size: 0.9em; margin-top: 10px;">
+            * Cột 4 và 5 có thể để trống (để tương thích với format Google Drive)
+        </p>
+    </div>
+    
+    <form method="post" enctype="multipart/form-data" id="upload-form">
+        {% csrf_token %}
+        
+        <div class="form-row">
+            <h2>📁 Chọn file CSV</h2>
+            
+            <div class="upload-area" id="upload-area">
+                <div id="upload-prompt">
+                    <h3 style="color: #666; margin: 10px 0;">🗂️ Kéo thả file CSV vào đây</h3>
+                    <p style="color: #999;">hoặc click để chọn file</p>
+                    <input type="file" name="csv_file" id="csv_file" accept=".csv" style="display: none;" required>
+                    <button type="button" onclick="document.getElementById('csv_file').click()" class="button default">
+                        Chọn File CSV
+                    </button>
+                </div>
+                
+                <div class="file-info" id="file-info">
+                    <h4 id="file-name"></h4>
+                    <p id="file-details"></p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="form-row" id="preview-section" style="display: none;">
+            <h2>👀 Preview dữ liệu</h2>
+            <table class="preview-table" id="preview-table">
+                <thead>
+                    <tr>
+                        <th>STT</th>
+                        <th>Question</th>
+                        <th>Answer</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="preview-tbody">
+                </tbody>
+            </table>
+            <div id="preview-summary"></div>
+        </div>
+        
+        <div class="form-row">
+            <h2>⚙️ Tùy chọn Import</h2>
+            
+            <div style="margin: 15px 0;">
+                <label>
+                    <input type="checkbox" id="update_existing" checked>
+                    Cập nhật entries có cùng STT (nếu không check sẽ skip entries trùng)
+                </label>
+            </div>
+            
+            <div style="margin: 15px 0;">
+                <label>
+                    <input type="checkbox" id="set_active" checked>
+                    Đặt tất cả entries mới thành active
+                </label>
+            </div>
+            
+            <div style="margin: 15px 0;">
+                <label>
+                    <input type="checkbox" id="validate_first" checked>
+                    Validate dữ liệu trước khi import (khuyến nghị)
+                </label>
+            </div>
+        </div>
+        
+        <div class="submit-row">
+            <input type="submit" value="🚀 Bắt đầu Import" class="default" id="submit-btn" disabled>
+            <a href="{% url 'admin:qa_management_qaentry_changelist' %}" class="button cancel-link">
+                Hủy bỏ
+            </a>
+        </div>
+    </form>
+    
+    <div class="form-row" style="margin-top: 30px; padding: 15px; background: #d4edda; border-left: 4px solid #28a745;">
+        <h3 style="color: #155724; margin-top: 0;">💡 Tips</h3>
+        <ul style="margin: 0; color: #155724;">
+            <li>Test với file nhỏ trước khi import file lớn</li>
+            <li>Backup dữ liệu hiện tại trước khi import</li>
+            <li>Check log để xem chi tiết các lỗi nếu có</li>
+            <li>Sau import, nhớ sync lên Google Drive</li>
+            <li>Rebuild FAISS index để cập nhật chatbot</li>
+        </ul>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const uploadArea = document.getElementById('upload-area');
+    const fileInput = document.getElementById('csv_file');
+    const fileInfo = document.getElementById('file-info');
+    const uploadPrompt = document.getElementById('upload-prompt');
+    const submitBtn = document.getElementById('submit-btn');
+    const previewSection = document.getElementById('preview-section');
+    const previewTable = document.getElementById('preview-table');
+    const previewTbody = document.getElementById('preview-tbody');
+    const previewSummary = document.getElementById('preview-summary');
+    
+    // Drag and drop handlers
+    uploadArea.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        uploadArea.classList.add('dragover');
+    });
+    
+    uploadArea.addEventListener('dragleave', function(e) {
+        e.preventDefault();
+        uploadArea.classList.remove('dragover');
+    });
+    
+    uploadArea.addEventListener('drop', function(e) {
+        e.preventDefault();
+        uploadArea.classList.remove('dragover');
+        
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            fileInput.files = files;
+            handleFileSelect(files[0]);
+        }
+    });
+    
+    // File input change handler
+    fileInput.addEventListener('change', function(e) {
+        if (e.target.files.length > 0) {
+            handleFileSelect(e.target.files[0]);
+        }
+    });
+    
+    function handleFileSelect(file) {
+        // Validate file type
+        if (!file.name.toLowerCase().endsWith('.csv')) {
+            alert('Vui lòng chọn file CSV (.csv)');
+            return;
+        }
+        
+        // Show file info
+        uploadPrompt.style.display = 'none';
+        fileInfo.style.display = 'block';
+        
+        document.getElementById('file-name').textContent = file.name;
+        document.getElementById('file-details').textContent = 
+            `Size: ${(file.size / 1024).toFixed(1)} KB | Type: ${file.type || 'text/csv'}`;
+        
+        // Enable submit button
+        submitBtn.disabled = false;
+        
+        // Preview file content
+        previewFile(file);
+    }
+    
+    function previewFile(file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const csv = e.target.result;
+                const lines = csv.split('\n');
+                
+                if (lines.length < 2) {
+                    throw new Error('File CSV không có dữ liệu');
+                }
+                
+                // Parse header
+                const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+                
+                // Validate required columns
+                const requiredCols = ['STT', 'question', 'answer'];
+                const missingCols = requiredCols.filter(col => !headers.includes(col));
+                
+                if (missingCols.length > 0) {
+                    throw new Error(`Missing required columns: ${missingCols.join(', ')}`);
+                }
+                
+                // Parse first few rows for preview
+                const previewRows = [];
+                let validRows = 0;
+                let errorRows = 0;
+                
+                for (let i = 1; i < Math.min(6, lines.length); i++) {
+                    if (lines[i].trim()) {
+                        const cols = parseCSVLine(lines[i]);
+                        const stt = cols[0] || '';
+                        const question = cols[1] || '';
+                        const answer = cols[2] || '';
+                        
+                        let status = '✅ Valid';
+                        if (!stt.trim() || !question.trim() || !answer.trim()) {
+                            status = '❌ Missing required fields';
+                            errorRows++;
+                        } else {
+                            validRows++;
+                        }
+                        
+                        previewRows.push({
+                            stt: stt.substring(0, 20),
+                            question: question.substring(0, 50) + (question.length > 50 ? '...' : ''),
+                            answer: answer.substring(0, 50) + (answer.length > 50 ? '...' : ''),
+                            status: status
+                        });
+                    }
+                }
+                
+                // Show preview
+                previewTbody.innerHTML = '';
+                previewRows.forEach(row => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${escapeHtml(row.stt)}</td>
+                        <td>${escapeHtml(row.question)}</td>
+                        <td>${escapeHtml(row.answer)}</td>
+                        <td>${row.status}</td>
+                    `;
+                    previewTbody.appendChild(tr);
+                });
+                
+                previewSummary.innerHTML = `
+                    <p><strong>Total rows:</strong> ${lines.length - 1} | 
+                    <strong>Preview:</strong> ${previewRows.length} rows | 
+                    <strong>Valid:</strong> ${validRows} | 
+                    <strong>Errors:</strong> ${errorRows}</p>
+                `;
+                
+                previewSection.style.display = 'block';
+                previewTable.style.display = 'table';
+                
+            } catch (error) {
+                alert(`Error parsing CSV: ${error.message}`);
+                console.error('CSV parsing error:', error);
+            }
+        };
+        
+        reader.readAsText(file);
+    }
+    
+    function parseCSVLine(line) {
+        const result = [];
+        let current = '';
+        let inQuotes = false;
+        
+        for (let i = 0; i < line.length; i++) {
+            const char = line[i];
+            
+            if (char === '"') {
+                inQuotes = !inQuotes;
+            } else if (char === ',' && !inQuotes) {
+                result.push(current.trim());
+                current = '';
+            } else {
+                current += char;
+            }
+        }
+        
+        result.push(current.trim());
+        return result;
+    }
+    
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+    
+    // Form submission confirmation
+    document.getElementById('upload-form').addEventListener('submit', function(e) {
+        const confirmed = confirm(
+            'Bạn có chắc chắn muốn import file CSV này?\n\n' +
+            'Thao tác này có thể mất vài phút tùy thuộc vào kích thước file.'
+        );
+        
+        if (!confirmed) {
+            e.preventDefault();
+        } else {
+            // Show loading state
+            submitBtn.value = '⏳ Đang import...';
+            submitBtn.disabled = true;
+        }
+    });
+});
+</script>
+{% endblock %}

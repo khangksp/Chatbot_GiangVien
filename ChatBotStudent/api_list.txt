@@ -1,0 +1,248 @@
+DANH SÁCH 20 API CHÍNH CỦA ỨNG DỤNG SINH VIÊN
+===============================================
+
+1. XÁC THỰC & ĐĂNG NHẬP
+------------------------
+POST /odp/auth/login
+- Đăng nhập bằng tài khoản/mật khẩu
+- Body: { username, password }
+- Response: { token, user: { mssv, email, name, avatar }, expires_in }
+
+POST /odp/auth/google/verify-token  
+- Đăng nhập bằng Google SSO
+- Body: { token }
+- Response: { token, user: { mssv, email, name, avatar }, expires_in }
+
+POST /odp/auth/request-otp
+- Gửi mã OTP qua email
+- Body: { email }
+- Response: { message: "OTP đã được gửi", status: true }
+
+POST /odp/auth/verify-otp
+- Xác thực mã OTP
+- Body: { email, otp }
+- Response: { token, user: { mssv, email, name }, expires_in }
+
+POST /odp/auth/create-account
+- Tạo tài khoản mới
+- Body: { email, password, ... }
+- Response: { message: "Tạo tài khoản thành công", user: { mssv, email } }
+
+GET /odp/auth/me
+- Lấy thông tin user hiện tại
+- Response: { mssv, email, name, avatar, role, permissions }
+
+POST /odp/auth/logout
+- Đăng xuất
+- Body: { token, mssv, device_ip }
+- Response: { message: "Đăng xuất thành công", status: true }
+
+2. THÔNG TIN SINH VIÊN
+-----------------------
+GET /odp/sinh-vien/profile
+- Lấy thông tin profile sinh viên
+- Response: { mssv, ho_ten, email, sdt, lop, khoa, nganh, avatar, ngay_sinh, gioi_tinh, dia_chi }
+
+GET /odp/profile/me
+- Lấy thông tin cá nhân (fallback)
+- Response: { mssv, name, email, avatar, role }
+
+3. HỌC PHÍ & THANH TOÁN
+-----------------------
+GET /odp/hoc-phi/tuition-all-by-student
+- Lấy danh sách tất cả học phí của sinh viên
+- Response: [{ nkhk, ngay_het_han, tong_tien_phai_thu, tong_tien_da_thu, tong_tien_con_lai, status }]
+
+GET /odp/hoc-phi/tuition-by-student?nkhk={nkhk}
+- Lấy chi tiết học phí theo học kỳ
+- Params: nkhk (niên khóa học kỳ)
+- Response: { mssv, nkhk, danh_sach_mon_hoc: [{ ma_mon_hoc, ten_mon_hoc, hoc_phi_mon_hoc, tien_da_thu, ngay_thu, trang_thai_mon_hoc, tin_chi }], tong_tien_phai_thu, tong_tien_da_thu, tong_tien_con_lai, ngay_het_han, trang_thai_tong }
+
+GET /odp/hoc-phi/gen-qr?nkhk={nkhk}
+- Tạo mã QR thanh toán học phí
+- Params: nkhk
+- Response: { qr_code: "base64_image", amount, content: "nội dung chuyển khoản", bank_info: { bank_name, account_number, account_name } }
+
+POST /odp/hoc-phi/upload-tuition?nkhk={nkhk}
+- Upload ảnh minh chứng thanh toán
+- Params: nkhk
+- Body: FormData với file ảnh
+- Response: { status: true, message: "Upload thành công", imageTuitionUrl: "https://..." }
+
+GET /odp/hoc-phi/get-image-tuition?nkhk={nkhk}
+- Lấy danh sách ảnh minh chứng đã upload
+- Params: nkhk
+- Response: { tuitionUrl: "https://...", status: "pending|approved|rejected" }
+
+4. ĐIỂM SỐ & HỌC TẬP
+---------------------
+GET /odp/bang-diem/list?nkhk={nkhk}
+- Lấy danh sách điểm theo học kỳ
+- Params: nkhk
+- Response: [{ ma_mon_hoc, ten_mon_hoc, tin_chi, diem_quy_doi, diem_chu, diem_so, xep_loai, trang_thai }]
+
+GET /odp/bang-diem/avg
+- Lấy điểm trung bình tổng
+- Response: { gpa: 3.5, total_credits: 120, completed_credits: 100, status: "Đạt" }
+
+GET /odp/bang-diem/avg-semester?nkhk={nkhk}
+- Lấy điểm trung bình theo học kỳ
+- Params: nkhk
+- Response: { gpa: 3.2, credits: 18, status: "Đạt", rank: 15 }
+
+GET /odp/bang-diem/avg/ranking
+- Lấy bảng xếp hạng điểm trung bình
+- Response: [{ rank: 1, mssv: "20112345", name: "Nguyễn Văn A", gpa: 3.8, class: "IT01" }]
+
+GET /odp/bang-diem/avg/ranking?me=true
+- Lấy xếp hạng cá nhân
+- Response: { my_rank: 15, total_students: 200, gpa: 3.2, percentile: 92.5 }
+
+GET /odp/bang-diem/credit
+- Lấy thông tin tín chỉ
+- Response: { total_credits: 120, completed_credits: 100, remaining_credits: 20, progress: 83.3 }
+
+GET /odp/bang-diem?ma_nhom={ma_nhom}
+- Lấy chi tiết điểm theo nhóm môn
+- Params: ma_nhom
+- Response: { ma_nhom, ten_mon_hoc, tin_chi, diem_giua_ky, diem_cuoi_ky, diem_tong_ket, diem_chu, trang_thai }
+
+5. THỜI KHÓA BIỂU
+------------------
+GET /odp/thoi-khoa-bieu
+- Lấy thời khóa biểu hiện tại
+- Body: { nkhk, tuan }
+- Response: [{ thu, tiet_bat_dau, tiet_ket_thuc, ma_mon_hoc, ten_mon_hoc, phong_hoc, giang_vien, lop_hoc }]
+
+6. ĐIỂM RÈN LUYỆN
+------------------
+GET /odp/diem-ren-luyen?nkhk={nkhk}
+- Lấy điểm rèn luyện theo học kỳ
+- Params: nkhk
+- Response: { nkhk, tong_diem: 85, xep_loai: "Tốt", chi_tiet: [{ tieu_chi: "Học tập", diem: 20, max_diem: 25 }] }
+
+GET /odp/diem-ren-luyen/history
+- Lấy lịch sử điểm rèn luyện
+- Response: [{ nkhk, tong_diem, xep_loai, ngay_cap_nhat }]
+
+7. THÔNG TIN MÔN HỌC
+---------------------
+GET /odp/nhom-hoc?nkhk={nkhk}
+- Lấy danh sách nhóm môn học
+- Params: nkhk
+- Response: [{ ma_nhom, ten_mon_hoc, tin_chi, lop_hoc, giang_vien, phong_hoc, thoi_gian, trang_thai }]
+
+GET /odp/nhom-hoc/progress?nkhk={nkhk}
+- Lấy tiến độ học tập
+- Params: nkhk
+- Response: { tong_tin_chi: 18, da_hoan_thanh: 12, dang_hoc: 6, ti_le_hoan_thanh: 66.7 }
+
+GET /odp/nhom-hoc/detail?ma_nhom={ma_nhom}
+- Lấy chi tiết nhóm môn học
+- Params: ma_nhom
+- Response: { ma_nhom, ten_mon_hoc, tin_chi, lop_hoc, giang_vien, phong_hoc, thoi_gian, lich_hoc, danh_sach_sinh_vien }
+
+8. SỰ KIỆN & HOẠT ĐỘNG
+-----------------------
+GET /odp/su-kien?nkhk={nkhk}
+- Lấy danh sách sự kiện theo học kỳ
+- Params: nkhk
+- Response: [{ id, ten_su_kien, mo_ta, thoi_gian_bat_dau, thoi_gian_ket_thuc, dia_diem, trang_thai, nguoi_to_chuc }]
+
+9. THÔNG TIN ĐOÀN VIÊN
+-----------------------
+GET /odp/doan-vien
+- Lấy thông tin đoàn viên
+- Response: { mssv, ho_ten, ngay_vao_doan, chi_doan, chuc_vu, trang_thai, ghi_chu }
+
+GET /odp/chuc-vu/get-position-semester?nkhk={nkhk}
+- Lấy lịch sử chức vụ theo học kỳ
+- Params: nkhk
+- Response: [{ nkhk, chuc_vu, don_vi, thoi_gian_bat_dau, thoi_gian_ket_thuc, trang_thai }]
+
+10. THƯ VIỆN & TÀI LIỆU
+-----------------------
+GET /odp/thu-vien?nkhk={nkhk}
+- Lấy thông tin thư viện theo học kỳ
+- Params: nkhk
+- Response: { nkhk, so_luot_muon: 15, so_sach_dang_muon: 3, tien_phat: 0, lich_su_muon: [{ ten_sach, ngay_muon, ngay_tra, trang_thai }] }
+
+GET /odp/thu-vien/history
+- Lấy lịch sử thư viện
+- Response: [{ nkhk, tong_luot_muon, tong_tien_phat, danh_sach_sach_da_muon }]
+
+11. KHẢO SÁT
+------------
+GET /odp/khao-sat/get-by-student?nkhk={nkhk}
+- Lấy danh sách khảo sát
+- Params: nkhk
+- Response: [{ id_lam_khao_sat, ten_khao_sat, mo_ta, thoi_gian_bat_dau, thoi_gian_ket_thuc, trang_thai, da_lam }]
+
+GET /odp/khao-sat/get-detail-question?id_lam_khao_sat={id}
+- Lấy chi tiết câu hỏi khảo sát
+- Params: id_lam_khao_sat
+- Response: { id_lam_khao_sat, ten_khao_sat, cau_hoi: [{ id, noi_dung, loai_cau_hoi, lua_chon }] }
+
+POST /odp/khao-sat/submit-survey?id_lam_khao_sat={id}
+- Nộp bài khảo sát
+- Params: id_lam_khao_sat
+- Body: { answers: [{ cau_hoi_id, cau_tra_loi }] }
+- Response: { status: true, message: "Nộp bài thành công" }
+
+GET /odp/khao-sat/status?id={id}
+- Lấy trạng thái khảo sát
+- Params: id
+- Response: { id_lam_khao_sat, trang_thai: "completed|pending|expired", ngay_nop, diem }
+
+12. BIỂU MẪU & TÀI LIỆU
+-----------------------
+GET /system/bieu-mau/get-all-form
+- Lấy danh sách tất cả biểu mẫu
+- Response: [{ ma_don, ten_don, mo_ta, loai_don, trang_thai, ngay_tao, file_mau }]
+
+GET /system/bieu-mau/get-detail-form?ma_don={ma_don}
+- Lấy chi tiết biểu mẫu
+- Params: ma_don
+- Response: { ma_don, ten_don, mo_ta, noi_dung, file_mau, huong_dan, yeu_cau }
+
+13. PHẢN HỒI & BÁO CÁO
+-----------------------
+POST /odp/feedback/create
+- Tạo phản hồi/báo cáo
+- Body: { content, type, title, priority }
+- Response: { id, status: "sent", message: "Gửi phản hồi thành công", ngay_gui }
+
+14. CHƯƠNG TRÌNH ĐÀO TẠO
+------------------------
+GET /odp/chuong-trinh-dao-tao
+- Lấy thông tin chương trình đào tạo
+- Response: { nganh_hoc, khoa, thoi_gian_dao_tao, tong_tin_chi, mon_hoc_bat_buoc: [{ ma_mon, ten_mon, tin_chi }], mon_hoc_tu_chon }
+
+15. ĐIỂM DANH
+-------------
+GET /odp/diem-danh/all-period
+- Lấy thông tin điểm danh tất cả kỳ
+- Response: { tong_buoi_hoc: 45, co_mat: 42, vang_mat: 3, ti_le_co_mat: 93.3, chi_tiet: [{ ngay, mon_hoc, trang_thai }] }
+
+GHI CHÚ:
+- Tất cả API đều sử dụng prefix "/odp/" (trừ system biểu mẫu)
+- Hầu hết API cần token xác thực trong header
+- Tham số nkhk (niên khóa học kỳ) được sử dụng rộng rãi
+- API upload file sử dụng FormData
+- Có hỗ trợ pagination và filtering
+
+CẤU TRÚC RESPONSE CHUNG:
+- Thành công: { status: true, data: {...}, message: "..." }
+- Lỗi: { status: false, error: "...", code: 400/401/500 }
+- Upload: { status: true, imageTuitionUrl: "https://...", message: "..." }
+
+HEADERS YÊU CẦU:
+- Authorization: "Bearer {token}"
+- Content-Type: "application/json" (trừ upload file)
+- Content-Type: "multipart/form-data" (cho upload file)
+
+THAM SỐ QUAN TRỌNG:
+- nkhk: Niên khóa học kỳ (format: YYMMK, VD: 25261 = 2025-2026 học kỳ 1)
+- mssv: Mã số sinh viên
+- ma_nhom: Mã nhóm môn học
+- ma_don: Mã đơn/biểu mẫu

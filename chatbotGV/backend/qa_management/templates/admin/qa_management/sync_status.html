@@ -1,0 +1,297 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls static admin_modify %}
+
+{% block title %}Sync Status Dashboard | Django Admin{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">Trang chủ</a>
+    &rsaquo; <a href="{% url 'admin:qa_management_qaentry_changelist' %}">Q&A Entries</a>
+    &rsaquo; Sync Status
+</div>
+{% endblock %}
+
+{% block extrahead %}
+<style>
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin: 20px 0;
+}
+
+.stat-card {
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 20px;
+    text-align: center;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.stat-number {
+    font-size: 2.5em;
+    font-weight: bold;
+    margin: 10px 0;
+}
+
+.stat-label {
+    color: #666;
+    font-size: 0.9em;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.status-synced { color: #28a745; }
+.status-pending { color: #ffc107; }
+.status-error { color: #dc3545; }
+.status-never { color: #6c757d; }
+
+.drive-status {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 20px;
+    margin: 20px 0;
+}
+
+.log-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+.log-table th,
+.log-table td {
+    padding: 10px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+}
+
+.log-table th {
+    background: #f8f9fa;
+    font-weight: bold;
+}
+
+.status-badge {
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.8em;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+.badge-success { background: #d4edda; color: #155724; }
+.badge-partial { background: #fff3cd; color: #856404; }
+.badge-failed { background: #f8d7da; color: #721c24; }
+
+.progress-bar {
+    width: 100%;
+    height: 20px;
+    background: #f0f0f0;
+    border-radius: 10px;
+    overflow: hidden;
+    margin: 10px 0;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #28a745, #20c997);
+    transition: width 0.3s ease;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="module aligned">
+    <h1>📊 Sync Status Dashboard</h1>
+    
+    <!-- Statistics Cards -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-number">{{ total_entries }}</div>
+            <div class="stat-label">Total Entries</div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-number status-synced">{{ synced_entries }}</div>
+            <div class="stat-label">✅ Synced</div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-number status-pending">{{ pending_entries }}</div>
+            <div class="stat-label">⏳ Pending</div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-number status-error">{{ error_entries }}</div>
+            <div class="stat-label">❌ Errors</div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-number status-never">{{ never_synced }}</div>
+            <div class="stat-label">🆕 Never Synced</div>
+        </div>
+    </div>
+    
+    <!-- Sync Progress -->
+    {% if total_entries > 0 %}
+    <div class="form-row">
+        <h2>📈 Sync Progress</h2>
+        <div class="progress-bar">
+            <div class="progress-fill" style="width: {% widthratio synced_entries total_entries 100 %}%"></div>
+        </div>
+        <p style="text-align: center; margin: 10px 0;">
+            {{ synced_entries }} / {{ total_entries }} entries synced 
+            ({% widthratio synced_entries total_entries 100 %}%)
+        </p>
+    </div>
+    {% endif %}
+    
+    <!-- Google Drive Status -->
+    <div class="drive-status">
+        <h2>☁️ Google Drive Status</h2>
+        
+        {% if drive_status.connected %}
+            <p><strong>Connection:</strong> <span style="color: #28a745;">✅ Connected</span></p>
+            
+            {% if drive_status.file_exists %}
+                <p><strong>File:</strong> {{ drive_status.file_name }}</p>
+                <p><strong>Size:</strong> {{ drive_status.file_size|filesizeformat }}</p>
+                <p><strong>Last Modified:</strong> {{ drive_status.modified_time }}</p>
+                <p><strong>Created:</strong> {{ drive_status.created_time }}</p>
+                <p><strong>File ID:</strong> <code>{{ drive_status.file_id }}</code></p>
+            {% else %}
+                <p><strong>File Status:</strong> <span style="color: #ffc107;">⚠️ File not found</span></p>
+                <p><strong>Expected Name:</strong> {{ drive_status.csv_filename }}</p>
+            {% endif %}
+            
+            <p><strong>Folder ID:</strong> <code>{{ drive_status.folder_id }}</code></p>
+            
+        {% else %}
+            <p><strong>Connection:</strong> <span style="color: #dc3545;">❌ Failed</span></p>
+            {% if drive_status.error %}
+                <p><strong>Error:</strong> {{ drive_status.error }}</p>
+            {% endif %}
+        {% endif %}
+    </div>
+    
+    <!-- Recent Sync Logs -->
+    <div class="form-row">
+        <h2>📋 Recent Sync Logs</h2>
+        
+        {% if recent_logs %}
+        <table class="log-table">
+            <thead>
+                <tr>
+                    <th>Operation</th>
+                    <th>Status</th>
+                    <th>Started</th>
+                    <th>Duration</th>
+                    <th>Processed</th>
+                    <th>Success Rate</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in recent_logs %}
+                <tr>
+                    <td>{{ log.get_operation_display }}</td>
+                    <td>
+                        <span class="status-badge 
+                            {% if log.status == 'success' %}badge-success
+                            {% elif log.status == 'partial' %}badge-partial
+                            {% else %}badge-failed{% endif %}">
+                            {{ log.get_status_display }}
+                        </span>
+                    </td>
+                    <td>{{ log.started_at|date:"M d, H:i" }}</td>
+                    <td>
+                        {% if log.duration_seconds %}
+                            {{ log.duration_seconds|floatformat:1 }}s
+                        {% else %}
+                            In progress...
+                        {% endif %}
+                    </td>
+                    <td>{{ log.entries_processed }}</td>
+                    <td>
+                        {% if log.entries_processed > 0 %}
+                            <span style="{% if log.success_rate >= 95 %}color: #28a745;{% elif log.success_rate >= 80 %}color: #ffc107;{% else %}color: #dc3545;{% endif %}">
+                                {{ log.success_rate|floatformat:1 }}%
+                            </span>
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p style="color: #6c757d; font-style: italic;">No sync logs available.</p>
+        {% endif %}
+    </div>
+    
+    <!-- Quick Actions -->
+    <div class="form-row" style="margin-top: 30px; padding: 20px; background: #f8f9fa; border-radius: 8px;">
+        <h2>🚀 Quick Actions</h2>
+        <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+            <a href="{% url 'admin:qa_import_from_drive' %}" class="button default">
+                📥 Import từ Drive
+            </a>
+            <a href="{% url 'admin:qa_export_to_drive' %}" class="button default">
+                📤 Export lên Drive
+            </a>
+            <a href="{% url 'admin:qa_bulk_import' %}" class="button">
+                📊 Bulk Import CSV
+            </a>
+            <a href="{% url 'admin:qa_management_qaentry_changelist' %}" class="button">
+                📝 Manage Entries
+            </a>
+        </div>
+    </div>
+    
+    <!-- Recommendations -->
+    {% if pending_entries > 0 or error_entries > 0 %}
+    <div class="form-row" style="margin-top: 20px; padding: 15px; background: #fff3cd; border-left: 4px solid #ffc107;">
+        <h3 style="color: #856404; margin-top: 0;">⚠️ Recommendations</h3>
+        <ul style="margin: 0; color: #856404;">
+            {% if pending_entries > 0 %}
+            <li>You have {{ pending_entries }} entries pending sync. Consider running export to Drive.</li>
+            {% endif %}
+            {% if error_entries > 0 %}
+            <li>{{ error_entries }} entries have sync errors. Check the entries and retry sync.</li>
+            {% endif %}
+            {% if never_synced > 0 %}
+            <li>{{ never_synced }} entries have never been synced. They may be newly created.</li>
+            {% endif %}
+        </ul>
+    </div>
+    {% endif %}
+    
+    <!-- Auto-refresh -->
+    <div style="margin-top: 30px; text-align: center;">
+        <button onclick="location.reload()" class="button">🔄 Refresh Status</button>
+        <p style="margin: 10px 0; color: #6c757d; font-size: 0.9em;">
+            Last updated: {{ "now"|date:"M d, Y H:i:s" }}
+        </p>
+    </div>
+</div>
+
+<script>
+// Auto-refresh every 30 seconds
+setTimeout(function() {
+    location.reload();
+}, 30000);
+
+// Add loading state to buttons
+document.querySelectorAll('a.button, button.button').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+        if (!this.classList.contains('cancel-link')) {
+            this.style.opacity = '0.6';
+            this.style.pointerEvents = 'none';
+            this.innerHTML = '⏳ ' + this.innerHTML;
+        }
+    });
+});
+</script>
+{% endblock %}

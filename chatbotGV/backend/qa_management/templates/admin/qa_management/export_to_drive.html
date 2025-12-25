@@ -1,0 +1,129 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls static admin_modify %}
+
+{% block title %}Export lên Google Drive | Django Admin{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">Trang chủ</a>
+    &rsaquo; <a href="{% url 'admin:qa_management_qaentry_changelist' %}">Q&A Entries</a>
+    &rsaquo; Export lên Google Drive
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="module aligned" style="max-width: 800px;">
+    <h1>📤 Export Q&A lên Google Drive</h1>
+    
+    <div class="form-row" style="margin: 20px 0; padding: 15px; background: #f8f9fa; border-left: 4px solid #17a2b8;">
+        <h3 style="color: #17a2b8; margin-top: 0;">ℹ️ Thông tin Export</h3>
+        <ul style="margin: 0;">
+            <li><strong>Tổng số entries:</strong> {{ total_entries }} entries</li>
+            <li><strong>Đích đến:</strong> File QA.csv trên Google Drive</li>
+            <li><strong>Format:</strong> CSV với cấu trúc STT,question,answer,,</li>
+            <li><strong>Chỉ export:</strong> Các entries đang active</li>
+        </ul>
+    </div>
+    
+    <div class="form-row" style="margin: 20px 0; padding: 15px; background: #fff3cd; border-left: 4px solid #ffc107;">
+        <h3 style="color: #856404; margin-top: 0;">⚠️ Lưu ý quan trọng</h3>
+        <ul style="margin: 0; color: #856404;">
+            <li>Thao tác này sẽ <strong>ghi đè hoàn toàn</strong> file QA.csv trên Drive</li>
+            <li>Dữ liệu cũ trên Drive sẽ bị mất (trừ khi có backup)</li>
+            <li>Chỉ export các entries có <code>is_active = True</code></li>
+            <li>Kiểm tra quyền write trên Google Drive</li>
+        </ul>
+    </div>
+    
+    {% if total_entries == 0 %}
+    <div class="form-row" style="margin: 20px 0; padding: 15px; background: #f8d7da; border-left: 4px solid #dc3545;">
+        <h3 style="color: #721c24; margin-top: 0;">❌ Không có dữ liệu</h3>
+        <p style="margin: 0; color: #721c24;">
+            Không có entries nào để export. Vui lòng thêm dữ liệu trước khi export.
+        </p>
+    </div>
+    {% else %}
+    <form method="post" style="margin-top: 30px;">
+        {% csrf_token %}
+        
+        <div class="form-row">
+            <div class="field-box">
+                <h2>Xác nhận Export</h2>
+                <p>Bạn có chắc chắn muốn export <strong>{{ total_entries }} entries</strong> lên Google Drive không?</p>
+                
+                <div style="margin: 20px 0;">
+                    <label>
+                        <input type="checkbox" id="confirm_export" required>
+                        Tôi hiểu rằng dữ liệu trên Drive sẽ bị ghi đè
+                    </label>
+                </div>
+                
+                <div style="margin: 20px 0;">
+                    <label>
+                        <input type="checkbox" id="create_backup" checked>
+                        Tạo backup file Drive hiện tại trước khi export (khuyến nghị)
+                    </label>
+                </div>
+                
+                <div style="margin: 20px 0;">
+                    <label>
+                        <input type="checkbox" id="active_only" checked disabled>
+                        Chỉ export entries đang active ({{ total_entries }} entries)
+                    </label>
+                </div>
+            </div>
+        </div>
+        
+        <div class="submit-row">
+            <input type="submit" value="🚀 Bắt đầu Export" class="default" 
+                   onclick="return confirm('⚠️ CẢNH BÁO: Dữ liệu trên Google Drive sẽ bị ghi đè!\n\nBạn có chắc chắn muốn tiếp tục?');">
+            <a href="{% url 'admin:qa_management_qaentry_changelist' %}" class="button cancel-link">
+                Hủy bỏ
+            </a>
+        </div>
+    </form>
+    {% endif %}
+    
+    <div class="form-row" style="margin-top: 30px; padding: 15px; background: #d4edda; border-left: 4px solid #28a745;">
+        <h3 style="color: #155724; margin-top: 0;">💡 Thao tác khuyến nghị</h3>
+        <ol style="margin: 0; color: #155724;">
+            <li>Kiểm tra dữ liệu trong database trước khi export</li>
+            <li>Tạo backup dữ liệu Drive hiện tại</li>
+            <li>Thực hiện export</li>
+            <li>Kiểm tra file trên Drive sau khi export xong</li>
+            <li>Test chatbot để đảm bảo hoạt động bình thường</li>
+        </ol>
+    </div>
+    
+    <div class="form-row" style="margin-top: 20px; padding: 15px; background: #cce5ff; border-left: 4px solid #007bff;">
+        <h3 style="color: #004085; margin-top: 0;">🔧 Các thao tác khác</h3>
+        <ul style="margin: 0; color: #004085;">
+            <li><a href="{% url 'admin:qa_sync_status' %}">Xem trạng thái sync</a></li>
+            <li><a href="{% url 'admin:qa_import_from_drive' %}">Import từ Drive</a></li>
+            <li><a href="{% url 'admin:qa_bulk_import' %}">Bulk import từ CSV</a></li>
+        </ul>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const confirmCheckbox = document.getElementById('confirm_export');
+    const submitButton = document.querySelector('input[type="submit"]');
+    
+    if (confirmCheckbox && submitButton) {
+        confirmCheckbox.addEventListener('change', function() {
+            submitButton.disabled = !this.checked;
+            if (this.checked) {
+                submitButton.style.opacity = '1';
+            } else {
+                submitButton.style.opacity = '0.5';
+            }
+        });
+        
+        // Initially disable submit button
+        submitButton.disabled = true;
+        submitButton.style.opacity = '0.5';
+    }
+});
+</script>
+{% endblock %}

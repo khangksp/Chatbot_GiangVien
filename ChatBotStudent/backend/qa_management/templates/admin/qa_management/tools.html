@@ -1,0 +1,249 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls static admin_modify %}
+
+{% block title %}{{ title }} | {{ site_title|default:_('Django site admin') }}{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+<a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
+&rsaquo; <a href="{% url 'admin:app_list' app_label=app_label %}">{{ app_label|capfirst|escape }}</a>
+&rsaquo; <a href="../">Q&A Entries</a>
+&rsaquo; {{ title }}
+</div>
+{% endblock %}
+
+{% block content %}
+<h1>{{ title }}</h1>
+<p class="help">{{ subtitle }}</p>
+
+<!-- Statistics Overview -->
+<div class="module aligned" style="margin-bottom: 20px;">
+    <h2>📊 Thống kê tổng quan</h2>
+    <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+        <div class="form-row" style="background: #f8f9fa; padding: 15px; border-radius: 5px; min-width: 150px;">
+            <div style="font-size: 24px; font-weight: bold; color: #007cba;">{{ stats.total_entries }}</div>
+            <div style="font-size: 12px; color: #666;">Tổng số Q&A</div>
+        </div>
+        <div class="form-row" style="background: #f8f9fa; padding: 15px; border-radius: 5px; min-width: 150px;">
+            <div style="font-size: 24px; font-weight: bold; color: #28a745;">{{ stats.active_entries }}</div>
+            <div style="font-size: 12px; color: #666;">Đang kích hoạt</div>
+        </div>
+        <div class="form-row" style="background: #f8f9fa; padding: 15px; border-radius: 5px; min-width: 150px;">
+            <div style="font-size: 24px; font-weight: bold; color: #17a2b8;">{{ stats.synced_entries }}</div>
+            <div style="font-size: 12px; color: #666;">Đã sync</div>
+        </div>
+        <div class="form-row" style="background: #f8f9fa; padding: 15px; border-radius: 5px; min-width: 150px;">
+            <div style="font-size: 24px; font-weight: bold; color: #ffc107;">{{ stats.pending_entries }}</div>
+            <div style="font-size: 12px; color: #666;">Chờ sync</div>
+        </div>
+        <div class="form-row" style="background: #f8f9fa; padding: 15px; border-radius: 5px; min-width: 150px;">
+            <div style="font-size: 24px; font-weight: bold; color: #dc3545;">{{ stats.error_entries }}</div>
+            <div style="font-size: 12px; color: #666;">Lỗi sync</div>
+        </div>
+    </div>
+</div>
+
+<!-- Drive Status -->
+<div class="module aligned" style="margin-bottom: 20px;">
+    <h2>☁️ Trạng thái Google Drive</h2>
+    {% if drive_status.connected %}
+        {% if drive_status.file_exists %}
+            <div style="background: #d4edda; padding: 15px; border-radius: 5px; border-left: 4px solid #28a745;">
+                <strong>✅ Kết nối thành công</strong><br>
+                📁 File: {{ drive_status.file_name }}<br>
+                📦 Kích thước: {{ drive_status.file_size|filesizeformat }}<br>
+                🕒 Cập nhật: {{ drive_status.modified_time|date:"d/m/Y H:i" }}
+            </div>
+        {% else %}
+            <div style="background: #fff3cd; padding: 15px; border-radius: 5px; border-left: 4px solid #ffc107;">
+                <strong>⚠️ Kết nối OK nhưng không tìm thấy file CSV</strong><br>
+                Hãy thực hiện Export để tạo file mới.
+            </div>
+        {% endif %}
+    {% else %}
+        <div style="background: #f8d7da; padding: 15px; border-radius: 5px; border-left: 4px solid #dc3545;">
+            <strong>❌ Không thể kết nối Google Drive</strong><br>
+            Lỗi: {{ drive_status.error|default:"Unknown error" }}
+        </div>
+    {% endif %}
+</div>
+
+<!-- Main Tools -->
+<div class="module aligned">
+    <h2>🛠️ Công cụ chính</h2>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
+        
+        <!-- Import from Drive -->
+        <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 20px;">
+            <h3 style="margin-top: 0; color: #007cba;">📥 Import từ Google Drive</h3>
+            <p>Tải dữ liệu Q&A từ Google Drive về database. Sẽ cập nhật hoặc tạo mới các entries.</p>
+            <a href="{{ import_url }}" class="button" style="background: #007cba; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;">
+                Bắt đầu Import
+            </a>
+        </div>
+
+        <!-- Export to Drive -->
+        <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 20px;">
+            <h3 style="margin-top: 0; color: #28a745;">📤 Export lên Google Drive</h3>
+            <p>Đồng bộ toàn bộ dữ liệu Q&A từ database lên Google Drive. Sẽ ghi đè file hiện tại.</p>
+            <a href="{{ export_url }}" class="button" style="background: #28a745; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;">
+                Bắt đầu Export
+            </a>
+        </div>
+
+        <!-- Bulk Import -->
+        <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 20px;">
+            <h3 style="margin-top: 0; color: #17a2b8;">📋 Bulk Import từ CSV</h3>
+            <p>Upload file CSV từ máy tính để import hàng loạt Q&A entries vào database.</p>
+            <a href="{{ bulk_import_url }}" class="button" style="background: #17a2b8; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;">
+                Upload CSV
+            </a>
+        </div>
+
+        <!-- Sync Status -->
+        <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 20px;">
+            <h3 style="margin-top: 0; color: #6f42c1;">📊 Sync Status Dashboard</h3>
+            <p>Xem chi tiết trạng thái đồng bộ và lịch sử các hoạt động sync.</p>
+            <a href="{{ sync_status_url }}" class="button" style="background: #6f42c1; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;">
+                Xem Dashboard
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Sync Logs -->
+{% if recent_logs %}
+<div class="module aligned" style="margin-top: 20px;">
+    <h2>📋 Hoạt động gần đây</h2>
+    <div class="results">
+        <table id="result_list" style="width: 100%;">
+            <thead>
+                <tr>
+                    <th>Thao tác</th>
+                    <th>Trạng thái</th>
+                    <th>Thời gian</th>
+                    <th>Kết quả</th>
+                    <th>Tỷ lệ thành công</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in recent_logs %}
+                <tr>
+                    <td>{{ log.get_operation_display }}</td>
+                    <td>
+                        {% if log.status == 'success' %}
+                            <span style="color: #28a745;">✅ {{ log.get_status_display }}</span>
+                        {% elif log.status == 'partial' %}
+                            <span style="color: #ffc107;">⚠️ {{ log.get_status_display }}</span>
+                        {% else %}
+                            <span style="color: #dc3545;">❌ {{ log.get_status_display }}</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ log.started_at|date:"d/m/Y H:i:s" }}</td>
+                    <td>{{ log.entries_success }}/{{ log.entries_processed }}</td>
+                    <td>
+                        {% if log.success_rate >= 95 %}
+                            <span style="color: #28a745; font-weight: bold;">{{ log.success_rate|floatformat:1 }}%</span>
+                        {% elif log.success_rate >= 80 %}
+                            <span style="color: #ffc107; font-weight: bold;">{{ log.success_rate|floatformat:1 }}%</span>
+                        {% else %}
+                            <span style="color: #dc3545; font-weight: bold;">{{ log.success_rate|floatformat:1 }}%</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+<!-- Quick Actions -->
+<div class="module aligned" style="margin-top: 20px;">
+    <h2>⚡ Thao tác nhanh</h2>
+    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+        <a href="../" class="button default">📋 Quay lại danh sách Q&A</a>
+        <a href="{% url 'admin:qa_management_qasynclog_changelist' %}" class="button default">📊 Xem tất cả Sync Logs</a>
+        <a href="../add/" class="button default">➕ Thêm Q&A mới</a>
+    </div>
+</div>
+
+<!-- Help Section -->
+<div class="module aligned" style="margin-top: 20px; background: #f8f9fa;">
+    <h2>❓ Hướng dẫn sử dụng</h2>
+    <div style="padding: 15px;">
+        <h4>🔄 Quy trình đồng bộ chuẩn:</h4>
+        <ol>
+            <li><strong>Thêm/Sửa Q&A:</strong> Sử dụng giao diện admin để thêm hoặc sửa câu hỏi</li>
+            <li><strong>Sync riêng lẻ:</strong> Chọn entries cần sync và dùng action "Sync các entries đã chọn"</li>
+            <li><strong>Export toàn bộ:</strong> Dùng "Export lên Google Drive" để đồng bộ tất cả</li>
+            <li><strong>Kiểm tra:</strong> Xem "Sync Status Dashboard" để theo dõi kết quả</li>
+        </ol>
+        
+        <h4>📥 Import dữ liệu:</h4>
+        <ul>
+            <li><strong>Từ Drive:</strong> Import dữ liệu có sẵn trên Google Drive</li>
+            <li><strong>Từ CSV:</strong> Upload file CSV từ máy tính (định dạng: STT, question, answer)</li>
+        </ul>
+        
+        <h4>⚠️ Lưu ý quan trọng:</h4>
+        <ul>
+            <li>Export sẽ ghi đè toàn bộ file trên Drive</li>
+            <li>Import sẽ cập nhật hoặc tạo mới entries dựa trên STT</li>
+            <li>Luôn kiểm tra Sync Status sau mỗi thao tác</li>
+            <li>File CSV phải có đúng định dạng: STT, question, answer</li>
+        </ul>
+    </div>
+</div>
+
+<style>
+.button {
+    display: inline-block;
+    padding: 8px 16px;
+    background: #007cba;
+    color: white;
+    text-decoration: none;
+    border-radius: 4px;
+    border: none;
+    cursor: pointer;
+    font-size: 13px;
+}
+
+.button:hover {
+    background: #005a87;
+    color: white;
+    text-decoration: none;
+}
+
+.button.default {
+    background: #6c757d;
+}
+
+.button.default:hover {
+    background: #545b62;
+}
+
+.module h2 {
+    background: #417690;
+    color: white;
+    padding: 10px 15px;
+    margin: 0 0 15px 0;
+    border-radius: 5px 5px 0 0;
+}
+
+.module {
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    background: white;
+}
+
+.module.aligned {
+    padding: 0;
+}
+
+.module.aligned > div,
+.module.aligned > p {
+    padding: 0 15px 15px 15px;
+}
+</style>
+{% endblock %}

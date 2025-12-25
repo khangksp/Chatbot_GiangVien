@@ -1,0 +1,58 @@
+# Generated migration for QA Management
+
+from django.db import migrations, models
+import django.core.validators
+import django.utils.timezone
+
+
+class Migration(migrations.Migration):
+
+    initial = True
+
+    dependencies = [
+    ]
+
+    operations = [
+        migrations.CreateModel(
+            name='QAEntry',
+            fields=[
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('stt', models.CharField(help_text='Số thứ tự/ID (ví dụ: TB_1252)', max_length=50, unique=True, validators=[django.core.validators.RegexValidator(message='STT chỉ được chứa chữ cái, số, dấu _ và -', regex='^[A-Za-z0-9_-]+$')], verbose_name='STT')),
+                ('question', models.TextField(help_text='Câu hỏi từ giảng viên', verbose_name='Câu hỏi')),
+                ('answer', models.TextField(help_text='Câu trả lời chi tiết', verbose_name='Câu trả lời')),
+                ('category', models.CharField(default='Giảng viên', help_text='Danh mục phân loại (mặc định: Giảng viên)', max_length=100, verbose_name='Danh mục')),
+                ('is_active', models.BooleanField(default=True, help_text='Chỉ các Q&A được kích hoạt mới hiển thị trong chatbot', verbose_name='Kích hoạt')),
+                ('created_at', models.DateTimeField(auto_now_add=True, verbose_name='Ngày tạo')),
+                ('updated_at', models.DateTimeField(auto_now=True, verbose_name='Ngày cập nhật')),
+                ('last_synced_to_drive', models.DateTimeField(blank=True, null=True, verbose_name='Lần cuối sync lên Drive')),
+                ('sync_status', models.CharField(choices=[('pending', 'Chờ sync'), ('synced', 'Đã sync'), ('error', 'Lỗi sync')], default='pending', max_length=20, verbose_name='Trạng thái sync')),
+                ('notes', models.TextField(blank=True, help_text='Ghi chú nội bộ (không hiển thị trong chatbot)', verbose_name='Ghi chú')),
+            ],
+            options={
+                'verbose_name': 'Q&A Entry',
+                'verbose_name_plural': 'Q&A Entries',
+                'db_table': 'qa_management_entry',
+                'ordering': ['stt'],
+            },
+        ),
+        migrations.CreateModel(
+            name='QASyncLog',
+            fields=[
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('operation', models.CharField(choices=[('import_from_drive', 'Import từ Drive'), ('export_to_drive', 'Export lên Drive'), ('sync_single', 'Sync đơn lẻ'), ('bulk_sync', 'Sync hàng loạt')], max_length=20, verbose_name='Loại thao tác')),
+                ('status', models.CharField(choices=[('success', 'Thành công'), ('partial', 'Một phần'), ('failed', 'Thất bại')], max_length=10, verbose_name='Trạng thái')),
+                ('started_at', models.DateTimeField(auto_now_add=True, verbose_name='Bắt đầu')),
+                ('completed_at', models.DateTimeField(blank=True, null=True, verbose_name='Hoàn thành')),
+                ('entries_processed', models.PositiveIntegerField(default=0, verbose_name='Số Q&A đã xử lý')),
+                ('entries_success', models.PositiveIntegerField(default=0, verbose_name='Số Q&A thành công')),
+                ('entries_failed', models.PositiveIntegerField(default=0, verbose_name='Số Q&A thất bại')),
+                ('error_message', models.TextField(blank=True, verbose_name='Lỗi chi tiết')),
+                ('details', models.JSONField(blank=True, default=dict, verbose_name='Chi tiết thao tác')),
+            ],
+            options={
+                'verbose_name': 'Sync Log',
+                'verbose_name_plural': 'Sync Logs',
+                'ordering': ['-started_at'],
+            },
+        ),
+    ]

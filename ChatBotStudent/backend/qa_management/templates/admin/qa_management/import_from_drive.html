@@ -1,0 +1,99 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls static admin_modify %}
+
+{% block title %}Import từ Google Drive | Django Admin{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">Trang chủ</a>
+    &rsaquo; <a href="{% url 'admin:qa_management_qaentry_changelist' %}">Q&A Entries</a>
+    &rsaquo; Import từ Google Drive
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="module aligned" style="max-width: 800px;">
+    <h1>📥 Import Q&A từ Google Drive</h1>
+    
+    <div class="form-row" style="margin: 20px 0; padding: 15px; background: #f8f9fa; border-left: 4px solid #17a2b8;">
+        <h3 style="color: #17a2b8; margin-top: 0;">ℹ️ Thông tin quan trọng</h3>
+        <ul style="margin: 0;">
+            <li><strong>Nguồn dữ liệu:</strong> File QA.csv trên Google Drive</li>
+            <li><strong>Hành động:</strong> Import tất cả Q&A từ Drive vào database</li>
+            <li><strong>Xử lý trùng lặp:</strong> Entries có cùng STT sẽ được cập nhật</li>
+            <li><strong>Backup:</strong> Khuyến nghị tạo backup trước khi import</li>
+        </ul>
+    </div>
+    
+    <div class="form-row" style="margin: 20px 0; padding: 15px; background: #fff3cd; border-left: 4px solid #ffc107;">
+        <h3 style="color: #856404; margin-top: 0;">⚠️ Lưu ý</h3>
+        <ul style="margin: 0; color: #856404;">
+            <li>Thao tác này sẽ ghi đè dữ liệu hiện tại với dữ liệu từ Drive</li>
+            <li>Các entries không có trong Drive sẽ không bị xóa</li>
+            <li>Kiểm tra kết nối Google Drive trước khi thực hiện</li>
+        </ul>
+    </div>
+    
+    <form method="post" style="margin-top: 30px;">
+        {% csrf_token %}
+        
+        <div class="form-row">
+            <div class="field-box">
+                <h2>Xác nhận Import</h2>
+                <p>Bạn có chắc chắn muốn import dữ liệu từ Google Drive không?</p>
+                
+                <div style="margin: 20px 0;">
+                    <label>
+                        <input type="checkbox" id="confirm_import" required>
+                        Tôi hiểu và muốn tiếp tục import từ Google Drive
+                    </label>
+                </div>
+                
+                <div style="margin: 20px 0;">
+                    <label>
+                        <input type="checkbox" id="create_backup">
+                        Tạo backup dữ liệu hiện tại trước khi import (khuyến nghị)
+                    </label>
+                </div>
+            </div>
+        </div>
+        
+        <div class="submit-row">
+            <input type="submit" value="🚀 Bắt đầu Import" class="default" 
+                   onclick="return confirm('Bạn có chắc chắn muốn import từ Google Drive?');">
+            <a href="{% url 'admin:qa_management_qaentry_changelist' %}" class="button cancel-link">
+                Hủy bỏ
+            </a>
+        </div>
+    </form>
+    
+    <div class="form-row" style="margin-top: 30px; padding: 15px; background: #d4edda; border-left: 4px solid #28a745;">
+        <h3 style="color: #155724; margin-top: 0;">💡 Gợi ý</h3>
+        <p style="margin: 0; color: #155724;">
+            Sau khi import thành công, hãy chạy lệnh 
+            <code>python manage.py rebuild_faiss_index</code> 
+            để cập nhật index cho chatbot.
+        </p>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const confirmCheckbox = document.getElementById('confirm_import');
+    const submitButton = document.querySelector('input[type="submit"]');
+    
+    confirmCheckbox.addEventListener('change', function() {
+        submitButton.disabled = !this.checked;
+        if (this.checked) {
+            submitButton.style.opacity = '1';
+        } else {
+            submitButton.style.opacity = '0.5';
+        }
+    });
+    
+    // Initially disable submit button
+    submitButton.disabled = true;
+    submitButton.style.opacity = '0.5';
+});
+</script>
+{% endblock %}

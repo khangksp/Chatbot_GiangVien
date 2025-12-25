@@ -1,0 +1,183 @@
+Cau truc du an ChatBotStudent
+
+============================================================
+└── ChatBotStudent
+    ├── api_list.txt
+    ├── backend
+    │   ├── __init__.py
+    │   ├── agent_integration.py
+    │   ├── ai_models
+    │   │   ├── __init__.py
+    │   │   ├── admin.py
+    │   │   ├── agent_integration.py
+    │   │   ├── agent_system
+    │   │   │   ├── __init__.py
+    │   │   │   ├── core
+    │   │   │   │   ├── __init__.py
+    │   │   │   │   ├── agent.py
+    │   │   │   │   ├── config.py
+    │   │   │   │   └── memory.py
+    │   │   │   ├── README.md
+    │   │   │   └── tools
+    │   │   │       ├── __init__.py
+    │   │   │       ├── base_tool.py
+    │   │   │       ├── rag_tool.py
+    │   │   │       ├── student_tools.py
+    │   │   │       └── tool_registry.py
+    │   │   ├── apps.py
+    │   │   ├── chatbot_logic
+    │   │   │   ├── __init__.py
+    │   │   │   ├── chatbot_service.py
+    │   │   │   ├── decision_engine.py
+    │   │   │   ├── rag_pipeline.py
+    │   │   │   ├── reranker.py
+    │   │   │   ├── retriever.py
+    │   │   │   └── student_api_handler.py
+    │   │   ├── external_api_service.py
+    │   │   ├── gemini
+    │   │   │   ├── __init__.py
+    │   │   │   ├── confidence.py
+    │   │   │   ├── generator.py
+    │   │   │   ├── key_manager.py
+    │   │   │   ├── memory.py
+    │   │   │   ├── prompts.py
+    │   │   │   ├── restorer.py
+    │   │   │   └── token_manager.py
+    │   │   ├── gemini_service.py
+    │   │   ├── interaction_logger_service.py
+    │   │   ├── management
+    │   │   ├── migrations
+    │   │   │   └── __init__.py
+    │   │   ├── models.py
+    │   │   ├── ner_service.py
+    │   │   ├── ocr_service.py
+    │   │   ├── phobert_service.py
+    │   │   ├── query_response_cache.py
+    │   │   ├── speech_service.py
+    │   │   ├── tests.py
+    │   │   ├── urls.py
+    │   │   ├── vietnamese_normalizer.py
+    │   │   └── views.py
+    │   ├── authentication
+    │   │   ├── __init__.py
+    │   │   ├── admin.py
+    │   │   ├── apps.py
+    │   │   ├── migrations
+    │   │   │   ├── 0001_initial.py
+    │   │   │   ├── 0002_add_personalization_fields.py
+    │   │   │   ├── 0003_faculty_gender.py
+    │   │   │   └── __init__.py
+    │   │   ├── models.py
+    │   │   ├── serializers.py
+    │   │   ├── tests.py
+    │   │   ├── urls.py
+    │   │   └── views.py
+    │   ├── backend
+    │   │   ├── __init__.py
+    │   │   ├── asgi.py
+    │   │   ├── middleware.py
+    │   │   ├── settings.py
+    │   │   ├── urls.py
+    │   │   └── wsgi.py
+    │   ├── chat
+    │   │   ├── __init__.py
+    │   │   ├── admin.py
+    │   │   ├── apps.py
+    │   │   ├── migrations
+    │   │   │   └── __init__.py
+    │   │   ├── models.py
+    │   │   ├── tests.py
+    │   │   ├── urls.py
+    │   │   └── views.py
+    │   ├── data
+    │   │   ├── link.csv
+    │   │   ├── QA.csv
+    │   │   └── test_csv.py
+    │   ├── db.sqlite3
+    │   ├── Dockerfile
+    │   ├── INTEGRATION_GUIDE.md
+    │   ├── knowledge
+    │   │   ├── __init__.py
+    │   │   ├── admin.py
+    │   │   ├── apps.py
+    │   │   ├── management
+    │   │   │   ├── __init__.py
+    │   │   │   └── commands
+    │   │   │       ├── __init__.py
+    │   │   │       └── check_chat_history.py
+    │   │   ├── migrations
+    │   │   │   ├── 0001_initial.py
+    │   │   │   ├── 0002_chathistory_entities_chathistory_intent_and_more.py
+    │   │   │   ├── 0003_add_user_to_chathistory.py
+    │   │   │   ├── 0004_alter_chathistory_session_title_and_more.py
+    │   │   │   ├── 0005_add_mssv_to_chathistory.py
+    │   │   │   └── __init__.py
+    │   │   ├── models.py
+    │   │   ├── serializers.py
+    │   │   ├── tests.py
+    │   │   ├── urls.py
+    │   │   └── views.py
+    │   ├── logs
+    │   │   └── failed_interactions.csv
+    │   ├── manage.py
+    │   ├── media
+    │   ├── PROJECT_SUMMARY.md
+    │   ├── qa_management
+    │   │   ├── __init__.py
+    │   │   ├── admin.py
+    │   │   ├── apps.py
+    │   │   ├── management
+    │   │   │   └── commands
+    │   │   ├── migrations
+    │   │   │   ├── 0001_initial.py
+    │   │   │   ├── 0002_alter_qaentry_stt.py
+    │   │   │   └── __init__.py
+    │   │   ├── models.py
+    │   │   ├── services.py
+    │   │   ├── signals.py
+    │   │   ├── templates
+    │   │   │   └── admin
+    │   │   │       └── qa_management
+    │   │   │           ├── bulk_import.html
+    │   │   │           ├── export_to_drive.html
+    │   │   │           ├── import_from_drive.html
+    │   │   │           ├── sync_status.html
+    │   │   │           └── tools.html
+    │   │   ├── tests.py
+    │   │   ├── urls.py
+    │   │   └── views.py
+    │   ├── requirements.txt
+    │   ├── static
+    │   └── thinking-armor-463404-n1-d7bcb4ffcaf5.json
+    ├── docker-compose.yml
+    ├── frontend
+    │   ├── public
+    │   │   ├── assets
+    │   │   │   ├── logo.png
+    │   │   │   └── LogoBDUEng.png
+    │   │   ├── favicon.ico
+    │   │   ├── index.html
+    │   │   ├── logo192.png
+    │   │   ├── logo512.png
+    │   │   └── robots.txt
+    │   └── src
+    │       ├── App.css
+    │       ├── App.js
+    │       ├── App.test.js
+    │       ├── components
+    │       │   ├── ChatBot.css
+    │       │   ├── ChatBot.js
+    │       │   ├── Login.css
+    │       │   ├── Login.js
+    │       │   ├── PersonalizationSettings.css
+    │       │   └── PersonalizationSettings.js
+    │       ├── config.js
+    │       ├── index.css
+    │       ├── index.js
+    │       ├── logo.svg
+    │       ├── reportWebVitals.js
+    │       └── setupTests.js
+    └── README.md
+============================================================
+
+Luu y: Da bo qua node_modules, .venv, __pycache__, athenaeum
